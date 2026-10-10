@@ -38,7 +38,7 @@ async def generate(contents) -> str:
 
 
 async def embed(texts: list[str]) -> list[list[float]]:
-    """Generate embeddings for a list of strings using text-embedding-004."""
+    """Generate embeddings for a list of strings using gemini-embedding-2."""
     if not texts:
         return []
         
@@ -48,7 +48,7 @@ async def embed(texts: list[str]) -> list[list[float]]:
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         response = await client.aio.models.embed_content(
-            model="text-embedding-004", contents=batch,
+            model="gemini-embedding-2", contents=batch,
         )
         all_embeddings.extend([e.values for e in response.embeddings])
         
