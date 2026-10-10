@@ -7,6 +7,7 @@ Ingestion pipeline:  file -> pages of text -> clean -> chunks
   3. Chunk   : semantic chunking - start a new chunk when the topic changes
 """
 import asyncio
+import logging
 import re
 import textwrap
 import time
@@ -18,6 +19,8 @@ from google.genai import types
 from backend.core.config import settings
 from backend.models.schemas import Chunk, DocumentMetadata
 from backend.services import gemini
+
+logger = logging.getLogger("doc_ai.ingestion")
 
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 OCR_PROMPT = (
@@ -97,12 +100,22 @@ async def semantic_chunks(pages: dict, threshold: float = 0.5) -> list:
     sentences = [(no, s) for no, text in sorted(pages.items()) for s in split_sentences(text)]
     if not sentences:
         return []
-    vectors = await gemini.embed([s for _, s in sentences])
+    
+    try:
+        vectors = await gemini.embed([s for _, s in sentences])
+    except Exception as e:
+        logger.warning(f"Embedding failed during semantic chunking: {e}")
+        vectors = []
 
+    has_vectors = len(vectors) == len(sentences)
     chunks, (page, current) = [], sentences[0]
     for i in range(1, len(sentences)):
         no, sentence = sentences[i]
-        topic_changed = dot_product(vectors[i - 1], vectors[i]) < threshold and len(current) >= settings.MIN_CHUNK_CHARS
+        topic_changed = (
+            has_vectors
+            and dot_product(vectors[i - 1], vectors[i]) < threshold
+            and len(current) >= settings.MIN_CHUNK_CHARS
+        )
         too_long = len(current) + len(sentence) > settings.MAX_CHUNK_CHARS
         if topic_changed or too_long:
             chunks.append((page, current))

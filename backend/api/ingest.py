@@ -86,8 +86,8 @@ async def upload_documents(files: List[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
 
-    # Process all files concurrently (OCR calls are I/O-bound; the global OCR semaphore still applies per file)
-    all_stats = list(await asyncio.gather(*(_ingest_file(f) for f in files if f.filename)))
+    # Process files sequentially to respect Gemini free tier rate limits (15 RPM)
+    all_stats = [await _ingest_file(f) for f in files if f.filename]
 
     total_chunks = sum(s.get("total_chunks", 0) for s in all_stats)
     response = BatchIngestionResponse(
