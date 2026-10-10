@@ -41,7 +41,15 @@ async def embed(texts: list[str]) -> list[list[float]]:
     """Generate embeddings for a list of strings using text-embedding-004."""
     if not texts:
         return []
-    response = await client.aio.models.embed_content(
-        model="text-embedding-004", contents=texts,
-    )
-    return [e.values for e in response.embeddings]
+        
+    all_embeddings = []
+    # Gemini API has a hard limit of 100 items per batch
+    batch_size = 100
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        response = await client.aio.models.embed_content(
+            model="text-embedding-004", contents=batch,
+        )
+        all_embeddings.extend([e.values for e in response.embeddings])
+        
+    return all_embeddings
