@@ -2,9 +2,16 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 from backend.core.config import settings
 
-# For MVP/development, we'll use a local file-based Qdrant instance in the "qdrant_storage" folder.
-# In production, this would point to a Qdrant Docker container or Qdrant Cloud.
-qdrant_client = QdrantClient(path="qdrant_storage")
+# Use Qdrant Cloud if credentials are provided, otherwise fallback to local storage
+if settings.QDRANT_URL and settings.QDRANT_API_KEY:
+    qdrant_client = QdrantClient(
+        url=settings.QDRANT_URL,
+        api_key=settings.QDRANT_API_KEY,
+    )
+    print("Connected to Qdrant Cloud.")
+else:
+    qdrant_client = QdrantClient(path="qdrant_storage")
+    print("Using local Qdrant storage.")
 
 COLLECTION_NAME = "documents"
 
@@ -14,8 +21,8 @@ def init_qdrant():
         qdrant_client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config={
-                # Size 384 matches the 'all-MiniLM-L6-v2' model we used for semantic chunking
-                "dense": VectorParams(size=384, distance=Distance.COSINE),
+                # Size 768 matches the Gemini 'text-embedding-004' model
+                "dense": VectorParams(size=768, distance=Distance.COSINE),
             },
             # Qdrant supports Sparse Vectors for true BM25/Lexical search. We configure the schema here.
             sparse_vectors_config={

@@ -35,3 +35,13 @@ async def generate(contents) -> str:
                 exhausted.add(model)
             logger.warning(f"{model} failed ({str(e)[:80]}), trying next model")
     return ""
+
+
+async def embed(texts: list[str]) -> list[list[float]]:
+    """Generate embeddings for a list of strings using text-embedding-004."""
+    if not texts:
+        return []
+    response = await client.aio.models.embed_content(
+        model="text-embedding-004", contents=texts,
+    )
+    return [e.values for e in response.embeddings]

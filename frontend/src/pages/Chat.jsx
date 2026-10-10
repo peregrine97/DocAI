@@ -63,7 +63,7 @@ export default function Chat() {
     }
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/ingest/upload_batch', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/v1/ingest/upload_batch`, {
         method: 'POST',
         body: formData
       });
@@ -109,7 +109,7 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/chat/ask', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/v1/chat/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

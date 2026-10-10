@@ -85,7 +85,7 @@ export default function AppWorkspace() {
 
   const fetchDocuments = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/ingest/list_documents');
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/v1/ingest/list_documents`);
       if (res.ok) {
         const data = await res.json();
         setDocuments(data.documents || []);
@@ -109,7 +109,7 @@ export default function AppWorkspace() {
     }
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/ingest/upload_batch', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/v1/ingest/upload_batch`, {
         method: 'POST',
         body: formData
       });
@@ -138,7 +138,7 @@ export default function AppWorkspace() {
     if (!window.confirm(`Are you sure you want to remove ${filename}?`)) return;
     
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/ingest/document/filename/${encodeURIComponent(filename)}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/v1/ingest/document/filename/${encodeURIComponent(filename)}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -163,7 +163,7 @@ export default function AppWorkspace() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/chat/ask', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/v1/chat/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -305,7 +305,7 @@ export default function AppWorkspace() {
               selectedDoc.endsWith('.pdf') ? (
                 <iframe
                   key={`${selectedDoc}-${pdfPage}`}
-                  src={`http://127.0.0.1:8000/documents/${selectedDoc}#page=${pdfPage}`}
+                  src={`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/documents/${selectedDoc}#page=${pdfPage}`}
                   className="pdf-iframe"
                   title="PDF Viewer"
                 />
@@ -313,7 +313,7 @@ export default function AppWorkspace() {
                 <div className="non-pdf-viewer">
                   <File size={48} style={{ opacity: 0.5, marginBottom: '20px' }} />
                   <p>Preview for non-PDF files is not supported.</p>
-                  <a href={`http://127.0.0.1:8000/documents/${selectedDoc}`} target="_blank" rel="noreferrer" className="view-raw-link">View File</a>
+                  <a href={`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/documents/${selectedDoc}`} target="_blank" rel="noreferrer" className="view-raw-link">View File</a>
                 </div>
               )
             ) : (

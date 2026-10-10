@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     CONFIDENCE_THRESHOLD: float = 0.5
     
+    # Qdrant Cloud Configuration
+    QDRANT_URL: str | None = None
+    QDRANT_API_KEY: str | None = None
+    
     # Ingestion Configuration
     MIN_PAGE_TEXT_CHARS: int = 50      # below this a PDF page (with an image) is treated as scanned
     MIN_CHUNK_CHARS: int = 50          # smaller chunks are dropped / not split on topic change

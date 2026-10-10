@@ -12,16 +12,12 @@ import textwrap
 import time
 import uuid
 
-import numpy as np
 import pymupdf
 from google.genai import types
-from sentence_transformers import SentenceTransformer
 
 from backend.core.config import settings
 from backend.models.schemas import Chunk, DocumentMetadata
 from backend.services import gemini
-
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")  # 384-dim, shared with search
 
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 OCR_PROMPT = (
@@ -93,17 +89,20 @@ def split_sentences(text: str) -> list:
     return [line for p in pieces if p.strip() for line in textwrap.wrap(p.strip(), settings.MAX_CHUNK_CHARS // 2)]
 
 
-def semantic_chunks(pages: dict, threshold: float = 0.5) -> list:
+def dot_product(v1, v2):
+    return sum(x * y for x, y in zip(v1, v2))
+
+async def semantic_chunks(pages: dict, threshold: float = 0.5) -> list:
     """Embed every sentence; start a new chunk when the topic changes or the chunk gets too long."""
     sentences = [(no, s) for no, text in sorted(pages.items()) for s in split_sentences(text)]
     if not sentences:
         return []
-    vectors = embedding_model.encode([s for _, s in sentences], normalize_embeddings=True)
+    vectors = await gemini.embed([s for _, s in sentences])
 
     chunks, (page, current) = [], sentences[0]
     for i in range(1, len(sentences)):
         no, sentence = sentences[i]
-        topic_changed = np.dot(vectors[i - 1], vectors[i]) < threshold and len(current) >= settings.MIN_CHUNK_CHARS
+        topic_changed = dot_product(vectors[i - 1], vectors[i]) < threshold and len(current) >= settings.MIN_CHUNK_CHARS
         too_long = len(current) + len(sentence) > settings.MAX_CHUNK_CHARS
         if topic_changed or too_long:
             chunks.append((page, current))
@@ -128,7 +127,7 @@ async def process_document_with_stats(data: bytes, filename: str):
         pages = {1: data.decode("utf-8", errors="ignore")}
 
     pages = {no: clean_text(t) for no, t in pages.items() if t.strip()}
-    chunk_tuples = await asyncio.to_thread(semantic_chunks, pages)  # CPU work off the event loop
+    chunk_tuples = await semantic_chunks(pages)
 
     metadata = DocumentMetadata(document_id=doc_id, filename=filename)
     chunks = [Chunk(chunk_id=str(uuid.uuid4()), document_id=doc_id, text=text, page_number=page,
