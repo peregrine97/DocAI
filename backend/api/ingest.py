@@ -1,6 +1,7 @@
 import asyncio
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from backend.services.ingestion import process_document_with_stats, embedding_model
+from backend.services.ingestion import process_document_with_stats
+from backend.services import gemini
 from backend.models.schemas import IngestionResponse, BatchIngestionResponse, Chunk
 from backend.db.qdrant import qdrant_client, COLLECTION_NAME, init_qdrant
 from backend.core.cache import query_cache
@@ -13,17 +14,15 @@ router = APIRouter()
 INDEX_BATCH_SIZE = 128
 
 
-def _index_chunks(chunks: List[Chunk]) -> None:
-    """Embeds and upserts chunks in batches. CPU-bound, so it is run in a worker thread."""
+async def _index_chunks(chunks: List[Chunk]) -> None:
+    """Embeds and upserts chunks in batches."""
     for batch_start in range(0, len(chunks), INDEX_BATCH_SIZE):
         batch = chunks[batch_start: batch_start + INDEX_BATCH_SIZE]
-        embeddings = embedding_model.encode(
-            [c.text for c in batch], batch_size=64, normalize_embeddings=True, show_progress_bar=False
-        )
+        embeddings = await gemini.embed([c.text for c in batch])
         points = [
             PointStruct(
                 id=chunk.chunk_id,  # Must be UUID
-                vector={"dense": embeddings[i].tolist()},
+                vector={"dense": embeddings[i]},
                 payload={
                     "text": chunk.text,
                     "document_id": chunk.document_id,  # top-level for fast filtering
@@ -53,7 +52,7 @@ async def _ingest_file(file: UploadFile) -> dict:
         
     chunks, stats = await process_document_with_stats(content, file.filename)
     if chunks:
-        await asyncio.to_thread(_index_chunks, chunks)
+        await _index_chunks(chunks)
     # New content invalidates cached answers
     query_cache.clear()
     return stats
